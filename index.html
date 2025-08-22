@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ca" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fintrack · Gestor de diners</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="brand">
+        <div class="logo" aria-hidden></div>
+        <div>
+          <h1>Fintrack · Gestor de diners</h1>
+          <div class="sub">Ingressos, despeses i <b>saldo final</b> per mes · tot en €</div>
+        </div>
+      </div>
+      <button id="themeToggle" class="btn alt" title="Canvia tema">☀️ Clar</button>
+    </header>
+
+    <div class="grid">
+      <!-- Formulari -->
+      <section class="card">
+        <div class="head"><div class="title">Afegir mes</div></div>
+        <div class="body">
+          <form id="entryForm" class="form">
+            <div class="row">
+              <div class="field">
+                <label for="month">Mes</label>
+                <input id="month" type="month" class="input" required />
+              </div>
+              <div class="field">
+                <label for="income">Ingressos (€)</label>
+                <input id="income" type="number" step="0.01" min="0" class="input" placeholder="0,00" required />
+              </div>
+              <div class="field">
+                <label for="expenses">Despeses (€)</label>
+                <input id="expenses" type="number" step="0.01" min="0" class="input" placeholder="0,00" required />
+              </div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <label for="ending">Saldo final (€) — opcional</label>
+                <input id="ending" type="number" step="0.01" class="input" placeholder="p.ex. 3.250" />
+              </div>
+              <div class="field" style="flex:1 1 100%">
+                <label for="notes">Notes</label>
+                <input id="notes" type="text" class="input" placeholder="Bonus, vacances, imprevistos…" />
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="reset" class="btn alt">Neteja</button>
+              <button type="submit" class="btn">Guarda</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Resum + KPIs + Gràfics -->
+      <section class="card">
+        <div class="head">
+          <div class="title">Resum</div>
+          <span id="periodSpan" class="pill">—</span>
+        </div>
+        <div class="body">
+          <div class="kpis">
+            <div class="kpi" id="kpiBalance"><h3>Balanç acumulat</h3><div class="value">—</div></div>
+            <div class="kpi" id="kpiLast"><h3>Balanç de l’últim mes</h3><div class="value">—</div></div>
+          </div>
+
+          <div class="charts">
+            <div class="card flat">
+              <div class="head"><div class="title">Evolució del saldo final</div></div>
+              <div class="body"><canvas id="saldoChart" height="140"></canvas></div>
+            </div>
+            <div class="card flat">
+              <div class="head"><div class="title">Balanç mensual</div></div>
+              <div class="body"><canvas id="lineChart" height="140"></canvas></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Taula -->
+    <section class="card" style="margin-top:18px">
+      <div class="head"><div class="title">Històric mensual</div></div>
+      <div class="body">
+        <div style="overflow:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Mes</th>
+                <th>Ingressos</th>
+                <th>Despeses</th>
+                <th>Balanç</th>
+                <th>Saldo final</th>
+                <th>Notes</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast">Dades guardades</div>
+  <!-- Firebase (SDK compat, no mòduls) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+<script>
+  // ⚠️ Substitueix pels valors del teu projecte (Configuració > les teves apps > Web)
+const firebaseConfig = {
+  apiKey: "AIzaSyDv2Egv82HhG0WT5iXTMKdQQrFOzxx4REk",
+  authDomain: "jana-eb892.firebaseapp.com",
+  projectId: "jana-eb892",
+  storageBucket: "jana-eb892.firebasestorage.app",
+  messagingSenderId: "64652708371",
+  appId: "1:64652708371:web:30eb4b4e44bba82ac8cde6",
+  measurementId: "G-MFFZ0FJ87W"
+};
+
+
+ firebase.initializeApp(firebaseConfig);
+
+  // (Opcional però recomanat) persistència offline
+  try {
+    firebase.firestore().enablePersistence({ synchronizeTabs: true });
+  } catch (e) {
+    console.warn('Persistence no disponible:', e.message);
+  }
+
+
+  // Exposa Firestore
+  window.db = firebase.firestore();
+</script>
+
+  <script src="./app.js"></script>
+</body>
+</html>
