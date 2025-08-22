@@ -1,28 +1,19 @@
-// --- Helpers existents (deixa'ls) ---
-const $ = (s, root=document) => root.querySelector(s);
-// const storeKey = 'fintrack.months.v3';  // ❌ ja no cal
+// === Plugins ===
+Chart.register(ChartDataLabels);
 
+// === Utils bàsics ===
+const $ = (s, root=document) => root.querySelector(s);
 const NFEUR_0 = new Intl.NumberFormat('ca-ES',{ style:'currency', currency:'EUR', maximumFractionDigits:0 });
 const NFEUR_2 = new Intl.NumberFormat('ca-ES',{ style:'currency', currency:'EUR', minimumFractionDigits:0, maximumFractionDigits:0 });
-
 const fmtEUR = (n, decimals=false) => (decimals ? NFEUR_2 : NFEUR_0).format(Number(n||0));
-const monthLabel = (ym) => {
-  if(!ym) return '—';
-  const [y,m] = ym.split('-').map(Number);
-  return new Date(y, m-1, 1).toLocaleDateString('ca-ES', { month:'long', year:'numeric' });
-};
+const monthLabel = (ym) => { if(!ym) return '—'; const [y,m] = ym.split('-').map(Number); return new Date(y, m-1, 1).toLocaleDateString('ca-ES', { month:'long', year:'numeric' }); };
 const toast = (msg) => { const t=$('#toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1500); };
 const getVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-// ❌ Trau aquestes dues si vols
-// function getData(){ try { return JSON.parse(localStorage.getItem(storeKey)) || []; } catch { return []; } }
-// function setData(arr){ localStorage.setItem(storeKey, JSON.stringify(arr)); }
+// === Estat (cache) ===
+let CACHE = []; // [{month, income, expenses, ending, notes}...]
 
-// ✅ Cache alimentada per Firestore
-let CACHE = []; // [{month, income, expenses, ending, notes}, ...]
-
-
-// -------- Theme --------
+// === Tema ===
 (function initTheme(){
   const saved = localStorage.getItem('fintrack.theme');
   if(saved === 'dark' || saved === 'light') document.documentElement.setAttribute('data-theme', saved);
@@ -31,14 +22,11 @@ let CACHE = []; // [{month, income, expenses, ending, notes}, ...]
     const next = cur === 'light' ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('fintrack.theme', next);
-    $('#themeToggle').textContent = next === 'light' ? '☀️ Clar' : '🌙 Fosc';
     applyThemeToCharts();
   });
-  const cur = document.documentElement.getAttribute('data-theme') || 'light';
-  $('#themeToggle').textContent = cur === 'light' ? '☀️ Clar' : '🌙 Fosc';
 })();
 
-// -------- Charts --------
+// === Charts ===
 let lineChart, saldoChart;
 function buildCharts(){
   const gridColor = getVar('--grid');
@@ -56,10 +44,7 @@ function buildCharts(){
     options: {
       plugins: {
         legend: { display:false },
-        datalabels: {
-          color: labelColor, align: 'top', anchor: 'end', offset: 6, clip:false,
-          formatter: (v)=> fmtEUR(v, false)
-        }
+        datalabels: { color: labelColor, align: 'top', anchor: 'end', offset: 6, clip:false, formatter: (v)=> fmtEUR(v, false) }
       },
       scales: {
         x: { grid: { display:false }, ticks:{ color: labelColor } },
@@ -80,10 +65,7 @@ function buildCharts(){
     options: {
       plugins: {
         legend: { display:false },
-        datalabels: {
-          color: labelColor, align:'top', anchor:'end', offset:6, clip:false,
-          formatter: (v)=> fmtEUR(v, false)
-        }
+        datalabels: { color: labelColor, align:'top', anchor:'end', offset:6, clip:false, formatter: (v)=> fmtEUR(v, false) }
       },
       scales: {
         x: { grid: { display:false }, ticks:{ color: labelColor } },
@@ -97,7 +79,6 @@ function applyThemeToCharts(){
   if(!lineChart || !saldoChart) return;
   const gridColor = getVar('--grid');
   const labelColor = getVar('--label');
-
   [lineChart, saldoChart].forEach(ch => {
     ch.options.scales.x.ticks.color = labelColor;
     ch.options.scales.y.ticks.color = labelColor;
@@ -105,8 +86,6 @@ function applyThemeToCharts(){
     ch.options.plugins.datalabels.color = labelColor;
     ch.update();
   });
-
-  // Update dataset colors from CSS vars (in case palette changes)
   saldoChart.data.datasets[0].borderColor = getVar('--primary');
   saldoChart.data.datasets[0].backgroundColor = hexToRgba(getVar('--primary'), 0.18);
   lineChart.data.datasets[0].borderColor  = getVar('--secondary');
@@ -114,7 +93,7 @@ function applyThemeToCharts(){
   saldoChart.update(); lineChart.update();
 }
 
-// Accepts hex like "#7c3aed" or "rgb(...)" or raw var values
+// === Color util ===
 function hexToRgba(color, alpha){
   const c = color.replace('#','').trim();
   if(color.startsWith('rgb')) return color.replace(')',`, ${alpha})`).replace('rgb(', 'rgba(');
@@ -128,7 +107,7 @@ function hexToRgba(color, alpha){
   return color;
 }
 
-// -------- Logic --------
+// === Càlculs derivats ===
 function computeDerived(rows){
   const data = [...rows].sort((a,b)=> a.month.localeCompare(b.month));
   const labels=[], balances=[], endings=[];
@@ -139,13 +118,9 @@ function computeDerived(rows){
     const exp = Number(r.expenses)||0;
     const bal = inc - exp;
 
-    // Ending: manual si existeix; si no, ending anterior + bal (o 0 + bal si és el primer)
     let ending;
-    if (r.ending !== '' && r.ending != null && !Number.isNaN(Number(r.ending))) {
-      ending = Number(r.ending);
-    } else {
-      ending = (lastEnding ?? 0) + bal;
-    }
+    if (r.ending !== '' && r.ending != null && !Number.isNaN(Number(r.ending))) ending = Number(r.ending);
+    else ending = (lastEnding ?? 0) + bal;
 
     labels.push(monthLabel(r.month));
     balances.push(bal);
@@ -165,6 +140,7 @@ function computeKPIs(rows){
   };
 }
 
+// === Render (inclou etiquetes per a layout mòbil) ===
 function refresh(){
   const data = [...CACHE].sort((a,b)=> a.month.localeCompare(b.month));
   const rowsEl = $('#rows'); rowsEl.innerHTML='';
@@ -182,22 +158,39 @@ function refresh(){
   // Període
   $('#periodSpan').textContent = data.length ? `${monthLabel(data[0].month)} – ${monthLabel(data[data.length-1].month)}` : '—';
 
-  // Taula (mateix codi que ja tens, però usant 'data')
+  // Files
   data.forEach((r,i)=>{
     const inc = Number(r.income)||0, exp = Number(r.expenses)||0;
     const bal = inc - exp;
+
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><span class="tag">${monthLabel(r.month)}</span></td>
-      <td>${fmtEUR(inc)}</td>
-      <td>${fmtEUR(exp)}</td>
-      <td style="font-weight:800; ${bal>=0?'color:#16a34a':'color:#ef4444'}">${fmtEUR(bal)}</td>
-      <td style="font-weight:800">${fmtEUR(endings[i])}</td>
-      <td>${(r.notes||'').replace(/</g,'&lt;')}</td>
-      <td style="white-space:nowrap">
-        <button class="btn alt" data-id="${r.month}" data-idx="${i}" data-act="edit" style="padding:6px 10px; font-size:12px">✏️</button>
-        <button class="btn alt" data-id="${r.month}" data-idx="${i}" data-act="del" style="padding:6px 10px; font-size:12px">🗑️</button>
-      </td>`;
+
+    const tdMonth = document.createElement('td'); tdMonth.dataset.label='Mes'; tdMonth.innerHTML = `<span class="tag">${monthLabel(r.month)}</span>`;
+    const tdInc = document.createElement('td'); tdInc.dataset.label='Ingressos'; tdInc.textContent = fmtEUR(inc);
+    const tdExp = document.createElement('td'); tdExp.dataset.label='Despeses'; tdExp.textContent = fmtEUR(exp);
+    const tdBal = document.createElement('td'); tdBal.dataset.label='Balanç'; tdBal.style.fontWeight='800'; tdBal.style.color = bal>=0?'#16a34a':'#ef4444'; tdBal.textContent = fmtEUR(bal);
+    const tdEnd = document.createElement('td'); tdEnd.dataset.label='Saldo final'; tdEnd.style.fontWeight='800'; tdEnd.textContent = fmtEUR(endings[i]);
+    const tdNotes = document.createElement('td'); tdNotes.dataset.label='Notes'; tdNotes.innerHTML = (r.notes||'').replace(/</g,'&lt;');
+
+    const tdAct = document.createElement('td'); tdAct.className='actions'; tdAct.dataset.label='Accions';
+    tdAct.style.whiteSpace='nowrap';
+tdAct.innerHTML = `
+  <button class="btn alt icon-btn" data-id="${r.month}" data-idx="${i}" data-act="edit" aria-label="Editar">
+    <svg class="icon"><use href="#icon-edit"></use></svg>
+  </button>
+  <button class="btn alt icon-btn" data-id="${r.month}" data-idx="${i}" data-act="del" aria-label="Esborrar">
+    <svg class="icon"><use href="#icon-trash"></use></svg>
+  </button>
+`;
+
+
+    tr.appendChild(tdMonth);
+    tr.appendChild(tdInc);
+    tr.appendChild(tdExp);
+    tr.appendChild(tdBal);
+    tr.appendChild(tdEnd);
+    tr.appendChild(tdNotes);
+    tr.appendChild(tdAct);
     rowsEl.appendChild(tr);
   });
 
@@ -205,12 +198,12 @@ function refresh(){
   saldoChart.data.labels = labels;
   saldoChart.data.datasets[0].data = endings;
   saldoChart.update();
-
   lineChart.data.labels = labels;
   lineChart.data.datasets[0].data = balances;
   lineChart.update();
 }
 
+// === Form (CRUD) ===
 $('#entryForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const month = $('#month').value;
@@ -219,14 +212,11 @@ $('#entryForm').addEventListener('submit', async (e)=>{
   const endingStr = $('#ending').value.trim();
   const ending = endingStr==='' ? '' : parseFloat(endingStr);
   const notes = $('#notes').value.trim();
-
   if(!month){ alert('Introdueix el mes'); return; }
-
   try{
     await db.collection('months').doc(month).set({ month, income, expenses, ending, notes }, { merge:true });
     toast('Mes guardat');
     e.target.reset();
-    // No cal cridar refresh(); el farà onSnapshot
   }catch(err){
     console.error(err);
     alert('Error guardant les dades');
@@ -236,17 +226,12 @@ $('#entryForm').addEventListener('submit', async (e)=>{
 $('#rows').addEventListener('click', async (e)=>{
   const btn = e.target.closest('button[data-act]');
   if(!btn) return;
-
-  const id = btn.dataset.id;     // doc id = month
-  const idx = +btn.dataset.idx;  // posició a CACHE (ordenada a refresh)
-
+  const id = btn.dataset.id;
+  const idx = +btn.dataset.idx;
   if(btn.dataset.act === 'del'){
     if(confirm('Vols esborrar aquest mes?')){
-      try{
-        await db.collection('months').doc(id).delete();
-      }catch(err){
-        console.error(err); alert('Error esborrant');
-      }
+      try{ await db.collection('months').doc(id).delete(); }
+      catch(err){ console.error(err); alert('Error esborrant'); }
     }
   }else if(btn.dataset.act === 'edit'){
     const data = [...CACHE].sort((a,b)=> a.month.localeCompare(b.month));
@@ -260,19 +245,12 @@ $('#rows').addEventListener('click', async (e)=>{
   }
 });
 
-
-// Init
+// === Inicialització ===
 buildCharts();
 applyThemeToCharts();
-// 🔴 Escolta en temps real la col·lecció 'months' i alimenta la CACHE
-db.collection('months').orderBy('month')
-  .onSnapshot((snap) => {
-    CACHE = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    refresh();
-  }, (err) => {
-    console.error('Firestore onSnapshot error:', err);
-  });
 
-refresh();
-
-
+// === Realtime Firestore ===
+db.collection('months').orderBy('month').onSnapshot(
+  (snap) => { CACHE = snap.docs.map(d => ({ id: d.id, ...d.data() })); refresh(); },
+  (err) => console.error('Firestore onSnapshot error:', err)
+);

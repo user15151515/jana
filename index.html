@@ -3,27 +3,53 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Fintrack · Gestor de diners</title>
+  <title>Gestor de diners</title>
+
+  <!-- === Fonts & CSS === -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
+
+  <!-- === Charts === -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 </head>
 <body>
+  <!-- === SVG Sprites (icones) === -->
+  <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+    <symbol id="icon-sun" viewBox="0 0 24 24">
+      <path d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.657-6.343 1.414-1.414M4.929 19.071l1.414-1.414m0-10.314L4.93 4.93M19.071 19.071l-1.414-1.414M12 8a4 4 0 1 1 0 8a4 4 0 0 1 0-8Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="icon-moon" viewBox="0 0 24 24">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="icon-edit" viewBox="0 0 24 24">
+      <path d="M3 21l3.75-.75L19 8.99a1.5 1.5 0 0 0 0-2.12l-1.86-1.86a1.5 1.5 0 0 0-2.12 0L2.75 16.25 2 20.99 3 21Z" fill="currentColor"/>
+    </symbol>
+ <symbol id="icon-trash" viewBox="0 0 24 24">
+    <path d="M4 7h16M9 7V5h6v2m-1 0v11a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2V7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+
   <div class="container">
+    <!-- === Header === -->
     <header class="header">
       <div class="brand">
         <div class="logo" aria-hidden></div>
         <div>
-          <h1>Fintrack · Gestor de diners</h1>
-          <div class="sub">Ingressos, despeses i <b>saldo final</b> per mes · tot en €</div>
+          <h1>Gestor de diners</h1>
         </div>
       </div>
-      <button id="themeToggle" class="btn alt" title="Canvia tema">☀️ Clar</button>
+
+      <!-- Botó tema amb icones -->
+      <button id="themeToggle" class="btn alt icon-btn" aria-label="Canvia tema" title="Canvia tema">
+        <svg class="icon sun"><use href="#icon-sun"></use></svg>
+        <svg class="icon moon"><use href="#icon-moon"></use></svg>
+        <span class="sr-only">Canvia tema</span>
+      </button>
     </header>
 
+    <!-- === Grid principal === -->
     <div class="grid">
-      <!-- Formulari -->
+      <!-- === Card Formulari === -->
       <section class="card">
         <div class="head"><div class="title">Afegir mes</div></div>
         <div class="body">
@@ -60,7 +86,7 @@
         </div>
       </section>
 
-      <!-- Resum + KPIs + Gràfics -->
+      <!-- === Card Resum/KPIs/Gràfics === -->
       <section class="card">
         <div class="head">
           <div class="title">Resum</div>
@@ -86,12 +112,12 @@
       </section>
     </div>
 
-    <!-- Taula -->
+    <!-- === Card Taula historial === -->
     <section class="card" style="margin-top:18px">
       <div class="head"><div class="title">Històric mensual</div></div>
       <div class="body">
-        <div style="overflow:auto">
-          <table>
+        <div class="table-wrap">
+          <table class="table">
             <thead>
               <tr>
                 <th>Mes</th>
@@ -110,37 +136,36 @@
     </section>
   </div>
 
+  <!-- === Toast === -->
   <div class="toast" id="toast">Dades guardades</div>
-  <!-- Firebase (SDK compat, no mòduls) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
-<script>
-  // ⚠️ Substitueix pels valors del teu projecte (Configuració > les teves apps > Web)
-const firebaseConfig = {
-  apiKey: "AIzaSyDv2Egv82HhG0WT5iXTMKdQQrFOzxx4REk",
-  authDomain: "jana-eb892.firebaseapp.com",
-  projectId: "jana-eb892",
-  storageBucket: "jana-eb892.firebasestorage.app",
-  messagingSenderId: "64652708371",
-  appId: "1:64652708371:web:30eb4b4e44bba82ac8cde6",
-  measurementId: "G-MFFZ0FJ87W"
-};
 
+  <!-- === Firebase compat (app + firestore) === -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script>
+    // === Firebase Config ===
+    const firebaseConfig = {
+      apiKey: "AIzaSyDv2Egv82HhG0WT5iXTMKdQQrFOzxx4REk",
+      authDomain: "jana-eb892.firebaseapp.com",
+      projectId: "jana-eb892",
+      storageBucket: "jana-eb892.firebasestorage.app",
+      messagingSenderId: "64652708371",
+      appId: "1:64652708371:web:30eb4b4e44bba82ac8cde6",
+      measurementId: "G-MFFZ0FJ87W"
+    };
 
- firebase.initializeApp(firebaseConfig);
+    // === Firebase Init ===
+    firebase.initializeApp(firebaseConfig);
 
-  // (Opcional però recomanat) persistència offline
-  try {
-    firebase.firestore().enablePersistence({ synchronizeTabs: true });
-  } catch (e) {
-    console.warn('Persistence no disponible:', e.message);
-  }
+    // === Firestore + opcional persistència ===
+    try { firebase.firestore().enablePersistence({ synchronizeTabs: true }); }
+    catch(e){ console.warn('Persistence no disponible:', e.message); }
 
+    // Exposa Firestore
+    window.db = firebase.firestore();
+  </script>
 
-  // Exposa Firestore
-  window.db = firebase.firestore();
-</script>
-
+  <!-- === App === -->
   <script src="./app.js"></script>
 </body>
 </html>
